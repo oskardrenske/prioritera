@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Prioritera mera</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #fff;
+    color: #111;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    user-select: none;
+  }
+
+  h1 {
+    font-size: 1.5rem;
+    margin-bottom: 2rem;
+    color: #333;
+    font-weight: 300;
+    letter-spacing: 0.1em;
+  }
+
+  .game {
+    display: flex;
+    gap: 4rem;
+    align-items: flex-end;
+  }
+
+  .section {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .section-label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: #888;
+    margin-bottom: 1rem;
+  }
+
+  .stack-area {
+    width: 220px;
+    min-height: 340px;
+    border-bottom: 3px solid #ccc;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    padding-bottom: 0.5rem;
+    position: relative;
+  }
+
+  .shelf-area {
+    width: 220px;
+    min-height: 340px;
+    display: flex;
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 6px;
+    padding-bottom: 0.5rem;
+  }
+
+  .object {
+    width: 180px;
+    height: 54px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 500;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.2s ease;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    position: relative;
+  }
+
+  .object:hover {
+    transform: scale(1.04);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  }
+
+  .object.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .object.disabled:hover {
+    transform: none;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  .object.top {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3), 0 0 0 2px rgba(255,255,255,0.15);
+  }
+
+  .object-name {
+    pointer-events: none;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  .object-name[contenteditable="true"] {
+    pointer-events: auto;
+    cursor: text;
+    outline: none;
+    background: rgba(0,0,0,0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+    min-width: 40px;
+    text-align: center;
+  }
+
+  .hint {
+    margin-top: 2rem;
+    font-size: 0.75rem;
+    color: #999;
+  }
+
+  @keyframes placeAnim {
+    from { transform: translateY(-20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  .object.placed {
+    animation: placeAnim 0.2s ease-out;
+  }
+</style>
+</head>
+<body>
+
+<h1>PRIORITERA</h1>
+
+<div class="game">
+  <div class="section">
+    <div class="section-label">Todo</div>
+    <div class="stack-area" id="stack"></div>
+  </div>
+  <div class="section">
+    <div class="section-label">Backlog</div>
+    <div class="shelf-area" id="shelf"></div>
+  </div>
+</div>
+
+<div class="hint">Klicka för att flytta till Todo från backlog eller tillbaka till backloggen.
+  * Endast översta objektet kan flyttas tillbaka. 
+  * Dubbelklicka namnet för att editera.
+</div>
+
+<script>
+const COLORS = ['#e74c3c', '#3498db', '#2ecc71', '#f39c12', '#9b59b6'];
+
+function randomJira() {
+  return 'JIRA-' + Math.floor(1000 + Math.random() * 9000);
+}
+
+const objects = COLORS.map((color, i) => ({
+  id: i, name: randomJira(), color
+}));
+
+const prioStack = [];
+const backlog = [0, 1, 2, 3, 4];
+
+const stackEl = document.getElementById('stack');
+const shelfEl = document.getElementById('shelf');
+
+function render() {
+  stackEl.innerHTML = '';
+  shelfEl.innerHTML = '';
+
+  prioStack.forEach((id, i) => {
+    const isTop = i === prioStack.length - 1;
+    stackEl.appendChild(createObjectEl(objects[id], isTop, 'stack'));
+  });
+
+  backlog.forEach(id => {
+    shelfEl.appendChild(createObjectEl(objects[id], true, 'shelf'));
+  });
+}
+
+function createObjectEl(obj, isClickable, location) {
+  const el = document.createElement('div');
+  el.className = 'object';
+  if (!isClickable) el.classList.add('disabled');
+  if (location === 'stack' && isClickable) el.classList.add('top');
+  el.style.background = obj.color;
+
+  const nameEl = document.createElement('span');
+  nameEl.className = 'object-name';
+  nameEl.textContent = obj.name;
+  el.appendChild(nameEl);
+
+  if (isClickable) {
+    el.addEventListener('click', (e) => {
+      if (nameEl.contentEditable === 'true') return;
+      if (location === 'shelf') {
+        backlog.splice(backlog.indexOf(obj.id), 1);
+        prioStack.push(obj.id);
+      } else {
+        prioStack.pop();
+        backlog.push(obj.id);
+      }
+      render();
+    });
+  }
+
+  el.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
+    nameEl.contentEditable = 'true';
+    nameEl.focus();
+    const range = document.createRange();
+    range.selectNodeContents(nameEl);
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  });
+
+  nameEl.addEventListener('blur', () => {
+    nameEl.contentEditable = 'false';
+    const newName = nameEl.textContent.trim();
+    if (newName) obj.name = newName;
+    else nameEl.textContent = obj.name;
+  });
+
+  nameEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      nameEl.blur();
+    }
+  });
+
+  return el;
+}
+
+render();
+</script>
+</body>
+</html>
