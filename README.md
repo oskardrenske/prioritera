@@ -2,6 +2,9 @@
 
 A minimal priority tool. Drag items from your backlog into a stack to decide what to work on next — only the top item is in focus.
 
+## Live
+[GitHub pages](https://oskardrenske.github.io/prioritera/)
+
 ## Usage
 
 Open `index.html` in a browser. No install required.
